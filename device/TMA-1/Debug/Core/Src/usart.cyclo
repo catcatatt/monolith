@@ -1,0 +1,8 @@
+../Core/Src/usart.c:40:6:HAL_UART_RxCpltCallback	4
+../Core/Src/usart.c:80:5:SERIAL_SETUP	1
+../Core/Src/usart.c:103:6:MX_USART1_UART_Init	2
+../Core/Src/usart.c:132:6:MX_USART2_UART_Init	2
+../Core/Src/usart.c:163:6:HAL_UART_MspInit	4
+../Core/Src/usart.c:242:6:HAL_UART_MspDeInit	3
+../Core/Src/usart.c:293:6:HAL_UARTEx_RxEventCallback	2
+../Core/Src/usart.c:305:5:GPS_SETUP	1

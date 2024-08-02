@@ -64,9 +64,9 @@ void RTC_FIX(int source) {
   syslog.value[4] = RTC_TIME.Minutes;
   syslog.value[5] = RTC_TIME.Seconds;
   syslog.value[6] = source;
-  SYS_LOG(LOG_INFO, SYS, SYS_RTC_FIX);
+  SYS_LOG(LOG_INFO, ESP, ESP_RTC_FIX);
 
-  DEBUG_MSG("[%8lu] [ OK] RTC fixed by %s: %.*s\r\n", HAL_GetTick(), source ? "ESP" : "UART", 19, rtc);
+
 
   return;
 }

@@ -1,14 +1,19 @@
 /*
  * logger.h
  *
- *  Created on: Sep 10, 2023
+ *  Created on: Feb 13, 2023
  *      Author: LUFT-AQUILA
  */
 
-#ifndef CORE_INC_LOGGER_H_
-#define CORE_INC_LOGGER_H_
+#ifndef INC_LOGGER_H_
+#define INC_LOGGER_H_
 
-/* system log structure */
+#include "stdio.h"
+
+// #define DEBUG_MODE
+// #define DEBUG_LOG
+
+/* system log data type */
 typedef struct {
   uint32_t timestamp;
   uint8_t level;
@@ -29,67 +34,112 @@ typedef enum {
 
 /* log source types */
 typedef enum {
-  SYS = 0,
+  ECU = 0,
+  ESP,
   CAN,
-  DIGITAL,
   ANALOG,
-  PULSE,
-  ACCELEROMETER,
-  GPS,
+  TIMER,
+  ACC,
+  LCD,
+  GPS
 } LOG_SOURCE;
 
-/* log key types per sources */
 typedef enum {
-  SYS_SD_INIT = 0,
-  SYS_CORE_INIT,
-  SYS_SERIAL_INIT,
-  SYS_TELEMETRY_REMOTE,
-  SYS_TELEMETRY_INIT,
-  CAN_INIT,
-  DIGITAL_INIT,
-  ANALOG_INIT,
-  PULSE_INIT,
-  ACCELEROMETER_INIT,
-  GPS_INIT,
-  SYS_READY,
-  SYS_RTC_FIX,
-  SYS_SD_FAIL,
-  CAN_ERR_CANERR,
-  CAN_ERR_RXMSGFAIL,
-  CAN_ERR_FIFOFULL
-} LOG_KEY_SYS;
+  ECU_BOOT = 0,
+  ECU_STATE,
+  ECU_READY,
+  SD_INIT
+} LOG_KEY_ECU;
 
 typedef enum {
-  DIGITAL_DATA = 0,
-} LOG_KEY_DIGITAL;
+  ESP_INIT = 0,
+  ESP_REMOTE,
+  ESP_RTC_FIX
+} LOG_KEY_ESP;
 
 typedef enum {
-  ANALOG_SYS = 0,
-  ANALOG_DATA
+  CAN_INIT = 0,
+  CAN_ERR,
+
+  CAN_INV_TEMP_1 = 0xA0,
+  CAN_INV_TEMP_2 = 0xA1,
+  CAN_INV_TEMP_3 = 0xA2,
+  CAN_INV_ANALOG_IN = 0xA3, // Acel
+  CAN_INV_DIGITAL_IN = 0xA4,
+  CAN_INV_MOTOR_POS = 0xA5,
+  CAN_INV_CURRENT = 0xA6,
+  CAN_INV_VOLTAGE = 0xA7,
+  CAN_INV_FLUX = 0xA8,
+  CAN_INV_REF = 0xA9,
+  CAN_INV_STATE = 0xAA,
+  CAN_INV_FAULT = 0xAB,
+  CAN_INV_TORQUE = 0xAC,
+  CAN_INV_FLUX_WEAKING = 0xAD,
+
+  CAN_INV_FIRMWARE_VER = 0xAE,
+  CAN_INV_DIAGNOSTIC = 0xAF,
+
+  CAN_INV_HIGH_SPD_MSG = 0xB0,
+
+  CAN_BMS_CORE = 0x80,
+  CAN_BMS_TEMP = 0x81,
+  CAN_STEERING_WHEEL_ANGLE = 0x2B //추
+} LOG_KEY_CAN;
+
+typedef enum {
+  ADC_INIT = 0,
+  ADC_CPU,
+  ADC_DIST,
+  ADC_A3
 } LOG_KEY_ANALOG;
 
 typedef enum {
-  PULSE_DATA = 0,
-} LOG_KEY_PULSE;
+  TIMER_IC = 0,
+} LOG_KEY_TIMER;
 
 typedef enum {
-  ACCELEROMETER_DATA = 0,
-} LOG_KEY_ACCELEROMETER;
+  ACC_INIT = 0,
+  ACC_DATA
+} LOG_KEY_ACC;
 
 typedef enum {
-  GPS_POS = 0,
+  LCD_INIT = 0,
+  LCD_UPDATED
+} LOG_KEY_LCD;
+
+typedef enum {
+  GPS_INIT = 0,
+  GPS_POS,
   GPS_VEC,
   GPS_TIME
 } LOG_KEY_GPS;
 
-/* Prototypes */
-int SYS_LOG(LOG_LEVEL level, LOG_SOURCE source, int key);
+/* system state type */
+typedef struct {
+  /* GPIOs */
+  uint8_t HV :1;
+  uint8_t RTD :1;
+  uint8_t BMS :1;
+  uint8_t IMD :1;
+  uint8_t BSPD :1;
 
-/* macro for debug print */
+  /* connections */
+  uint8_t SD :1;
+  uint8_t CAN :1;
+  uint8_t ESP :1;
+  uint8_t ACC :1;
+  uint8_t LCD :1;
+  uint8_t GPS :1;
+
+  uint32_t _reserved :21;
+} SYSTEM_STATE2;
+
+/* Prototypes */
+
 #ifdef DEBUG_MODE
 #define DEBUG_MSG(f_, ...) printf((f_), ##__VA_ARGS__)
 #else
 #define DEBUG_MSG(f_, ...)
 #endif
 
-#endif /* CORE_INC_LOGGER_H_ */
+#endif /* INC_LOGGER_H_ */

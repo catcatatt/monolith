@@ -61,6 +61,8 @@ LOG syslog;
 
 // system state
 SYSTEM_STATE sys_state;
+SYSTEM_STATE2 sys_state2;
+
 
 // timer alarm flag
 uint32_t timer_flag = 0;
@@ -95,9 +97,11 @@ uint8_t can_rx_data[8];
 
 // adc conversion buffers
 uint32_t adc_flag = 0;
-uint32_t adc_sys_value[2] = { 0, };
+uint16_t adc_sys_value[2] = { 0, };
 #ifdef ENABLE_MONITOR_ANALOG
-uint32_t adc_ain_value[ADC_COUNT] = { 0, };
+uint16_t adc_ain_value[ADC_COUNT] = { 0, };
+uint16_t adc_ain_value2[ADC_COUNT2] = { 0, };
+
 #endif
 
 // timer pulse input capture flag and data
@@ -143,6 +147,8 @@ int _write(int file, uint8_t *ptr, int len) {
   * @brief  The application entry point.
   * @retval int
   */
+
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -170,6 +176,7 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
+  MX_ADC3_Init();
   MX_RTC_Init();
   MX_TIM1_Init();
   MX_TIM5_Init();
@@ -178,12 +185,13 @@ int main(void)
   MX_I2C3_Init();
   MX_SDIO_SD_Init();
   MX_USART1_UART_Init();
-  MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
   MX_FATFS_Init();
-  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /********** CORE SYSTEM STARTUP **********/
+  ring_buffer_init(&TELEMETRY_BUFFER, (char *)TELEMETRY_BUFFER_ARR, sizeof(TELEMETRY_BUFFER_ARR));
+
   int ret;
   DEBUG_MSG("[%8lu] [INF] core system is in startup\r\n", HAL_GetTick());
 
@@ -192,40 +200,36 @@ int main(void)
   DATETIME boot;
   RTC_READ(&boot);
   DEBUG_MSG("[%8lu] [INF] RTC time is 20%02d-%02d-%02d %02d:%02d:%02d\r\n", HAL_GetTick(), boot.year, boot.month, boot.date, boot.hour, boot.minute, boot.second);
-
-
-  /********** SD card initialization **********/
-  ret = SD_SETUP(&boot);
-
-  if (ret == SYS_OK) {
-    sys_state.SD = true;
-    HAL_GPIO_WritePin(GPIOE, LED_SD_Pin, GPIO_PIN_SET);
-
-    SYS_LOG(LOG_INFO, SYS, SYS_SD_INIT);
-
-    DEBUG_MSG("[%8lu] [ OK] SD card setup\r\n", HAL_GetTick());
-  } else {
-    sys_state.SD = false;
-    HAL_GPIO_WritePin(GPIOE, LED_SD_Pin, GPIO_PIN_RESET);
-
-    syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, SYS_SD_INIT);
-
-    DEBUG_MSG("[%8lu] [ERR] SD card setup failed: %d\r\n", HAL_GetTick(), ret);
-  }
+//  bool sd_initialized = false;
+//
+//
+//  /********** SD card initialization **********/
+//  if (!sd_initialized) {
+//          int ret = SD_SETUP(&boot);
+//
+//          if (ret == SYS_OK) {
+//              sys_state.SD = true;
+//              HAL_GPIO_WritePin(GPIOE, LED_SD_Pin, GPIO_PIN_SET);
+//              SYS_LOG(LOG_INFO, SYS, SYS_SD_INIT);
+//              DEBUG_MSG("[%8lu] [ OK] SD card setup\r\n", HAL_GetTick());
+//              sd_initialized = true;  // 초기화 성공 시 플래그를 true로 설정
+//          } else {
+//              sys_state.SD = false;
+//              HAL_GPIO_WritePin(GPIOE, LED_SD_Pin, GPIO_PIN_RESET);
+//              syslog.value[0] = (uint8_t)ret;
+//              SYS_LOG(LOG_ERROR, SYS, SYS_SD_INIT);
+//              DEBUG_MSG("[%8lu] [ERR] SD card setup failed: %d\r\n", HAL_GetTick(), ret);
+//          }
+//      }
 
 
   /********** core system initialization **********/
-  HAL_GPIO_WritePin(GPIOA, LED_ONBOARD_0_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOA, LED_ONBOARD_1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOE, LED_CUSTOM_0_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOE, LED_CUSTOM_1_Pin, GPIO_PIN_RESET);
 
   sys_state.ERR = false;
   sys_state.CAN = false;
   sys_state.TELEMETRY = false;
-
-  HAL_GPIO_WritePin(GPIOE, LED_ERR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, LED_ERR_SYS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, LED_ERR_CAN_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOE, LED_HEARTBEAT_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOE, LED_CAN_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
@@ -233,7 +237,7 @@ int main(void)
   // RTC time sync by UART
   HAL_UART_Receive_IT(UART_DEBUG, rtc, 20);
 
-  SYS_LOG(LOG_INFO, SYS, SYS_CORE_INIT);
+  SYS_LOG(LOG_INFO, ECU, ECU_BOOT);
 
   DEBUG_MSG("[%8lu] [ OK] core system setup\r\n", HAL_GetTick());
 
@@ -243,12 +247,12 @@ int main(void)
   ret = SERIAL_SETUP();
 
   if (ret == SYS_OK) {
-    SYS_LOG(LOG_INFO, SYS, SYS_SERIAL_INIT);
+    // SYS_LOG(LOG_INFO, SYS, SYS_SERIAL_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] serial log output port setup\r\n", HAL_GetTick());
   } else {
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, SYS_SERIAL_INIT);
+    // SYS_LOG(LOG_ERROR, SYS, SYS_SERIAL_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] serial log output port setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -262,6 +266,7 @@ int main(void)
   if (ret == SYS_OK) {
     sys_state.TELEMETRY = true;
 
+
     // flash 3 times
     HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_SET);
     HAL_Delay(100);
@@ -272,18 +277,18 @@ int main(void)
     HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
     HAL_Delay(100);
     HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_SET);
-    HAL_Delay(100);
-    HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
 
-    SYS_LOG(LOG_INFO, SYS, SYS_TELEMETRY_INIT);
+
+    SYS_LOG(LOG_INFO, ESP, ESP_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] TELEMETRY setup\r\n", HAL_GetTick());
   } else {
     sys_state.TELEMETRY = false;
     HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
 
+
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, SYS_TELEMETRY_INIT);
+    SYS_LOG(LOG_ERROR, ESP, ESP_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] TELEMETRY setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -298,7 +303,7 @@ int main(void)
     sys_state.CAN = true;
     HAL_GPIO_WritePin(GPIOE, LED_CAN_Pin, GPIO_PIN_SET);
 
-    SYS_LOG(LOG_INFO, SYS, CAN_INIT);
+    SYS_LOG(LOG_INFO, CAN, CAN_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] CAN transceiver setup\r\n", HAL_GetTick());
   } else {
@@ -306,7 +311,7 @@ int main(void)
     HAL_GPIO_WritePin(GPIOE, LED_CAN_Pin, GPIO_PIN_RESET);
 
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, CAN_INIT);
+    SYS_LOG(LOG_ERROR, CAN, CAN_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] CAN transceiver setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -318,12 +323,10 @@ int main(void)
   ret = DIGITAL_SETUP();
 
   if (ret == SYS_OK) {
-    SYS_LOG(LOG_INFO, SYS, DIGITAL_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] digital input setup\r\n", HAL_GetTick());
   } else {
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, DIGITAL_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] digital input setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -335,12 +338,12 @@ int main(void)
   ret = ANALOG_SETUP();
 
   if (ret == SYS_OK) {
-    SYS_LOG(LOG_INFO, SYS, ANALOG_INIT);
+    SYS_LOG(LOG_INFO, ANALOG, ADC_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] analog input setup\r\n", HAL_GetTick());
   } else {
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, ANALOG_INIT);
+    SYS_LOG(LOG_ERROR, ANALOG, ADC_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] analog input setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -369,12 +372,12 @@ int main(void)
   ret = ACCELEROMETER_SETUP();
 
   if (ret == SYS_OK) {
-    SYS_LOG(LOG_INFO, SYS, ACCELEROMETER_INIT);
+    SYS_LOG(LOG_INFO, ACC, ACC_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] accelerometer setup\r\n", HAL_GetTick());
   } else {
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, ACCELEROMETER_INIT);
+    SYS_LOG(LOG_ERROR, ACC, ACC_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] accelerometer setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -386,12 +389,12 @@ int main(void)
   ret = GPS_SETUP();
 
   if (ret == SYS_OK) {
-    SYS_LOG(LOG_INFO, SYS, GPS_INIT);
+    SYS_LOG(LOG_INFO, GPS, GPS_INIT);
 
     DEBUG_MSG("[%8lu] [ OK] GPS setup\r\n", HAL_GetTick());
   } else {
     syslog.value[0] = (uint8_t)ret;
-    SYS_LOG(LOG_ERROR, SYS, GPS_INIT);
+    SYS_LOG(LOG_ERROR, GPS, GPS_INIT);
 
     DEBUG_MSG("[%8lu] [ERR] GPS setup failed: %d\r\n", HAL_GetTick(), ret);
   }
@@ -399,7 +402,7 @@ int main(void)
 
 
   /********** CORE SYSTEM STARTUP COMPLETE **********/
-  SYS_LOG(LOG_INFO, SYS, SYS_READY);
+  SYS_LOG(LOG_INFO, ECU, ECU_READY);
   DEBUG_MSG("[%8lu] [ OK] CORE SYSTEM STARTUP COMPLETE\r\n", HAL_GetTick());
 
   HAL_TIM_Base_Start_IT(&htim1); // start 100ms periodic timer
@@ -416,18 +419,36 @@ int main(void)
 
       *(uint16_t *)(syslog.value + 0) = (uint16_t)adc_sys_value[0];
       *(uint16_t *)(syslog.value + 2) = (uint16_t)adc_sys_value[1];
-      SYS_LOG(LOG_INFO, ANALOG, ANALOG_SYS);
+      SYS_LOG(LOG_INFO, ANALOG, ADC_CPU);
     }
 
 #ifdef ENABLE_MONITOR_ANALOG
     if (adc_flag & (1 << FLAG_ADC_AIN)) {
       adc_flag &= ~(1 << FLAG_ADC_AIN);
 
+      if (adc_ain_value[0] >= 1) {
+    	    HAL_GPIO_WritePin(GPIOE, LED_ERR_SYS_Pin, GPIO_PIN_SET);
+          }
+
       *(uint16_t *)(syslog.value + 0) = (uint16_t)adc_ain_value[0];
       *(uint16_t *)(syslog.value + 2) = (uint16_t)adc_ain_value[1];
       *(uint16_t *)(syslog.value + 4) = (uint16_t)adc_ain_value[2];
       *(uint16_t *)(syslog.value + 6) = (uint16_t)adc_ain_value[3];
-      SYS_LOG(LOG_INFO, ANALOG, ANALOG_DATA);
+      SYS_LOG(LOG_INFO, ANALOG, ADC_DIST);
+    }
+#endif
+    HAL_GPIO_WritePin(GPIOE, LED_ERR_SYS_Pin, GPIO_PIN_SET);
+
+
+#ifdef ENABLE_MONITOR_ANALOG
+    if (adc_flag & (1 << FLAG_ADC_AIN2)) {
+      adc_flag &= ~(1 << FLAG_ADC_AIN2);
+
+      *(uint16_t *)(syslog.value + 0) = (uint16_t)adc_ain_value2[0];
+      *(uint16_t *)(syslog.value + 2) = (uint16_t)adc_ain_value2[1];
+      *(uint16_t *)(syslog.value + 4) = (uint16_t)adc_ain_value2[2];
+      *(uint16_t *)(syslog.value + 6) = (uint16_t)adc_ain_value2[3];
+      SYS_LOG(LOG_INFO, ANALOG, ADC_A3);
     }
 #endif
 
@@ -449,7 +470,8 @@ int main(void)
       accelerometer_flag = false;
 
       *(uint64_t *)syslog.value = *(uint64_t *)accelerometer_value;
-      SYS_LOG(LOG_INFO, ACCELEROMETER, ACCELEROMETER_DATA);
+
+      SYS_LOG(LOG_INFO, ACC, ACC_DATA);
     }
 #endif
 
@@ -464,7 +486,7 @@ int main(void)
     SD_WRITE();
 
 #ifdef ENABLE_SERIAL
-    SERIAL_TRANSMIT_LOG();
+//    SERIAL_TRANSMIT_LOG();
 #endif
 
 #ifdef ENABLE_TELEMETRY
@@ -544,21 +566,20 @@ void SystemClock_Config(void)
 void TIMER_100ms(void) {
 #ifdef ENABLE_MONITOR_DIGITAL
   /* record digital input channels */
-  syslog.value[0] = !HAL_GPIO_ReadPin(GPIOD, DIN0_Pin);
-  syslog.value[1] = !HAL_GPIO_ReadPin(GPIOD, DIN1_Pin);
-  syslog.value[2] = !HAL_GPIO_ReadPin(GPIOD, DIN2_Pin);
-  syslog.value[3] = !HAL_GPIO_ReadPin(GPIOD, DIN3_Pin);
-  syslog.value[4] = !HAL_GPIO_ReadPin(GPIOD, DIN4_Pin);
-  syslog.value[5] = !HAL_GPIO_ReadPin(GPIOD, DIN5_Pin);
-  syslog.value[6] = !HAL_GPIO_ReadPin(GPIOD, DIN6_Pin);
-  syslog.value[7] = !HAL_GPIO_ReadPin(GPIOD, DIN7_Pin);
-  SYS_LOG(LOG_INFO, DIGITAL, DIGITAL_DATA);
+
 #endif
 
 #ifdef ENABLE_MONITOR_ANALOG
   /* start analog input channels ADC conversion */
   if (!(adc_flag & (1 << FLAG_ADC_AIN))) {
     HAL_ADC_Start_DMA(&hadc2, adc_ain_value, 4);
+  }
+#endif
+
+#ifdef ENABLE_MONITOR_ANALOG
+  /* start analog input channels ADC conversion */
+  if (!(adc_flag & (1 << FLAG_ADC_AIN2))) {
+    HAL_ADC_Start_DMA(&hadc3, adc_ain_value2, 4);
   }
 #endif
 

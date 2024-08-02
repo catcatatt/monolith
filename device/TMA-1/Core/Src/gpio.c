@@ -33,28 +33,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   static uint32_t rtc_fix_triggered = false;
   if ((GPIO_Pin == GPIO_PIN_8) && (handshake_flag & (1 << HANDSHAKE_FINISHED))) {
 
-    if (HAL_GPIO_ReadPin(GPIOB, ESP_COMM_Pin)) {
-      handshake_flag |= (1 << REMOTE_CONNECTED);
-
-      syslog.value[0] = true;
-      SYS_LOG(LOG_INFO, SYS, SYS_TELEMETRY_REMOTE);
-      HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_SET);
-
-      DEBUG_MSG("[%8lu] [INF] remote telemetry server connected\r\n", HAL_GetTick());
-
-      if (!rtc_fix_triggered && !(handshake_flag & (1 << RTC_FIXED))) {
-        rtc_fix_triggered = true;
-        HAL_I2C_Master_Receive_IT(I2C_TELEMETRY, ESP_I2C_ADDR, rtc, sizeof(rtc));
-      }
-    } else {
-      handshake_flag &= ~(1 << REMOTE_CONNECTED);
-
-      syslog.value[0] = false;
-      SYS_LOG(LOG_WARN, SYS, SYS_TELEMETRY_REMOTE);
-      HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
-
-      DEBUG_MSG("[%8lu] [INF] remote telemetry server disconnected\r\n", HAL_GetTick());
-    }
+//    if (HAL_GPIO_ReadPin(GPIOB, ESP_COMM_Pin)) {
+//      handshake_flag |= (1 << REMOTE_CONNECTED);
+//
+//      syslog.value[0] = true;
+//      SYS_LOG(LOG_INFO, ECU, ECU_BOOT);
+//      HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_SET);
+//
+//
+//      if (!rtc_fix_triggered && !(handshake_flag & (1 << RTC_FIXED))) {
+//        rtc_fix_triggered = true;
+//        HAL_I2C_Master_Receive_IT(I2C_TELEMETRY, ESP_I2C_ADDR, rtc, sizeof(rtc));
+//      }
+//    } else {
+//      handshake_flag &= ~(1 << REMOTE_CONNECTED);
+//
+//      syslog.value[0] = false;
+//      SYS_LOG(LOG_WARN, ECU, ECU_BOOT);
+//      HAL_GPIO_WritePin(GPIOE, LED_TELEMETRY_Pin, GPIO_PIN_RESET);
+//
+//    }
   }
 }
 #endif
@@ -95,22 +93,17 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LED_ONBOARD_0_Pin|LED_ONBOARD_1_Pin, GPIO_PIN_RESET);
+  // HAL_GPIO_WritePin(GPIOA, LED_ONBOARD_0_Pin|LED_ONBOARD_1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LED_CUSTOM_0_Pin|LED_CUSTOM_1_Pin|LED_ERR_Pin|LED_HEARTBEAT_Pin
+  HAL_GPIO_WritePin(GPIOE, LED_ERR_SYS_Pin|LED_ERR_CAN_Pin|LED_HEARTBEAT_Pin
                           |LED_SD_Pin|LED_CAN_Pin|LED_TELEMETRY_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PAPin PAPin */
-  GPIO_InitStruct.Pin = LED_ONBOARD_0_Pin|LED_ONBOARD_1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
 
   /*Configure GPIO pins : PEPin PEPin PEPin PEPin
                            PEPin PEPin PEPin */
-  GPIO_InitStruct.Pin = LED_CUSTOM_0_Pin|LED_CUSTOM_1_Pin|LED_ERR_Pin|LED_HEARTBEAT_Pin
+  GPIO_InitStruct.Pin = LED_ERR_SYS_Pin|LED_ERR_CAN_Pin|LED_HEARTBEAT_Pin
                           |LED_SD_Pin|LED_CAN_Pin|LED_TELEMETRY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -125,17 +118,13 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : PDPin PDPin PDPin PDPin
                            PDPin PDPin PDPin PDPin */
-  GPIO_InitStruct.Pin = DIN0_Pin|DIN1_Pin|DIN2_Pin|DIN3_Pin
-                          |DIN4_Pin|DIN5_Pin|DIN6_Pin|DIN7_Pin;
+  GPIO_InitStruct.Pin = RTD_ACTIVE_Pin|HV_ACTIVE_Pin|BMS_FAULT_Pin|IMD_FAULT_Pin
+                          |BSPD_FAULT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = ESP_COMM_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(ESP_COMM_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);

@@ -1,0 +1,7 @@
+../Core/Src/can.c:32:6:HAL_CAN_RxFifo0MsgPendingCallback	3
+../Core/Src/can.c:56:6:HAL_CAN_ErrorCallback	1
+../Core/Src/can.c:70:6:HAL_CAN_RxFifo0FullCallback	1
+../Core/Src/can.c:84:5:CAN_SETUP	7
+../Core/Src/can.c:143:6:MX_CAN1_Init	2
+../Core/Src/can.c:175:6:HAL_CAN_MspInit	2
+../Core/Src/can.c:214:6:HAL_CAN_MspDeInit	2

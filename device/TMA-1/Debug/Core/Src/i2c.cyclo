@@ -1,0 +1,12 @@
+../Core/Src/i2c.c:42:6:HAL_I2C_MasterTxCpltCallback	3
+../Core/Src/i2c.c:59:6:HAL_I2C_MasterRxCpltCallback	2
+../Core/Src/i2c.c:66:6:HAL_I2C_ErrorCallback	1
+../Core/Src/i2c.c:73:6:HAL_I2C_MemRxCpltCallback	1
+../Core/Src/i2c.c:83:5:TELEMETRY_SETUP	3
+../Core/Src/i2c.c:125:6:TELEMETRY_TRANSMIT_LOG	3
+../Core/Src/i2c.c:148:5:ACCELEROMETER_WRITE	1
+../Core/Src/i2c.c:153:5:ACCELEROMETER_SETUP	1
+../Core/Src/i2c.c:169:6:MX_I2C1_Init	2
+../Core/Src/i2c.c:198:6:MX_I2C3_Init	2
+../Core/Src/i2c.c:227:6:HAL_I2C_MspInit	3
+../Core/Src/i2c.c:297:6:HAL_I2C_MspDeInit	3

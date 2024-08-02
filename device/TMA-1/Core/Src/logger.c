@@ -25,7 +25,8 @@ extern uint32_t serial_flag;
 extern ring_buffer_t SERIAL_BUFFER;
 #endif
 
-int SYS_LOG(LOG_LEVEL level, LOG_SOURCE source, int key) {
+int SYS_LOG(LOG_LEVEL level, LOG_SOURCE source, int32_t key) {
+
   syslog.timestamp = HAL_GetTick();
   syslog.level = level;
   syslog.source = source;
@@ -54,9 +55,11 @@ int SYS_LOG(LOG_LEVEL level, LOG_SOURCE source, int key) {
   }
 
 #ifdef ENABLE_TELEMETRY
-  if (sys_state.TELEMETRY && (handshake_flag & (1 << REMOTE_CONNECTED))) {
+
+  if (sys_state.TELEMETRY) {
     telemetry_flag |= 1 << TELEMETRY_BUFFER_REMAIN;
     ring_buffer_queue_arr(&TELEMETRY_BUFFER, (char *)&syslog, sizeof(LOG));
+
   }
 #endif
 
@@ -67,9 +70,9 @@ int SYS_LOG(LOG_LEVEL level, LOG_SOURCE source, int key) {
 
 #ifdef DEBUG_MODE
   if (syslog.source == CAN) {
-    DEBUG_MSG("[%8lu] [LOG] %s\t%s\t%03x\t\t%02x %02x %02x %02x %02x %02x %02x %02x\r\n", syslog.timestamp, STR_LOG_LEVEL[syslog.level], STR_LOG_SOURCE[syslog.source], syslog.key, syslog.value[0], syslog.value[1], syslog.value[2], syslog.value[3], syslog.value[4], syslog.value[5], syslog.value[6], syslog.value[7]);
+//	    DEBUG_MSG("[%8lu] [LOG] %s\t%s\t%03x\t\t%02x %02x %02x %02x %02x %02x %02x %02x\r\n", syslog.timestamp, STR_LOG_LEVEL[syslog.level], STR_LOG_SOURCE[syslog.source], syslog.key, syslog.value[0], syslog.value[1], syslog.value[2], syslog.value[3], syslog.value[4], syslog.value[5], syslog.value[6], syslog.value[7]);
   } else {
-    DEBUG_MSG("[%8lu] [LOG] %s\t%s\t%s\t\t%02x %02x %02x %02x %02x %02x %02x %02x\r\n", syslog.timestamp, STR_LOG_LEVEL[syslog.level], STR_LOG_SOURCE[syslog.source], STR_LOG_KEY[syslog.source][syslog.key], syslog.value[0], syslog.value[1], syslog.value[2], syslog.value[3], syslog.value[4], syslog.value[5], syslog.value[6], syslog.value[7]);
+//	    DEBUG_MSG("[%8lu] [LOG] %s\t%s\t%s\t\t%02x %02x %02x %02x %02x %02x %02x %02x\r\n", syslog.timestamp, STR_LOG_LEVEL[syslog.level], STR_LOG_SOURCE[syslog.source], STR_LOG_KEY[syslog.source][syslog.key], syslog.value[0], syslog.value[1], syslog.value[2], syslog.value[3], syslog.value[4], syslog.value[5], syslog.value[6], syslog.value[7]);
   }
 #endif
 

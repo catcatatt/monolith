@@ -7,17 +7,15 @@
 
 #ifndef CORE_INC_TYPES_H_
 #define CORE_INC_TYPES_H_
-
 #define ADC_COUNT 4
-#define PULSE_CH_COUNT 4
+#define ADC_COUNT2 4
+
 
 #define I2C_TELEMETRY     &hi2c1
 #define I2C_ACCELEROMETER &hi2c3
 
 #define UART_DEBUG     &huart1
-#define UART_TELEMETRY &huart2
-#define UART_GPS       &huart3
-#define UART_SERIAL    &huart6
+#define UART_GPS       &huart2
 
 /* RTC datetime */
 typedef struct {
@@ -50,8 +48,9 @@ typedef enum {
 
 /* adc flags */
 typedef enum {
-  FLAG_ADC_SYS = 0,
+  FLAG_ADC_SYS = 1,
   FLAG_ADC_AIN,
+  FLAG_ADC_AIN2
 } ADC_FLAG;
 
 /* pulse input capture channel index */
@@ -112,13 +111,14 @@ typedef struct {
   uint32_t utc_time;
 } GPS_DATETIME;
 
-/* system state type */
 typedef struct {
-  uint8_t ERR;
-  uint8_t SD;
-  uint8_t TELEMETRY;
-  uint8_t CAN;
+	  uint8_t ERR;
+	  uint8_t SD;
+	  uint8_t TELEMETRY;
+	  uint8_t CAN;
+
 } SYSTEM_STATE;
+
 
 typedef enum {
   SYS_OK = 0,

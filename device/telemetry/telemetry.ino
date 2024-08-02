@@ -3,19 +3,18 @@
 #include <RingBuf.h>
 #include <ArduinoJson.h>
 #include <SocketIOclient.h>
-
 /****************************************************************************
  * Hotspot AP configurations                                                *
  ****************************************************************************/
-const char ssid[] = NETWORK_SSID;
-const char pwd[]  = NETWORK_PASSWORD;
+const char ssid[] = "JuDaneg";
+const char pwd[]  = "11111111";
 
 /****************************************************************************
  * telemetry server configuration                                           *
  ****************************************************************************/
-const char server[] = SERVER_NAME;
-const char url[] = "/socket.io/?EIO=4&device=1&channel="CHANNEL_NAME"&key="CHANNEL_KEY;
-const int port = 80; // telemetry port of socket.io server
+const char server[] = "afa2024.ooguy.com";
+const char url[] = "/socket.io/?EIO=4&device=1&channel=afa&key=1234";
+const int port = 80; // telemetry port of socket. io server
 
 // GPIO and I2C configurations
 #define ESP_COMM 19 // STM32 EXTI GPIO
@@ -23,7 +22,7 @@ const int port = 80; // telemetry port of socket.io server
 #define I2C_SCL  21
 #define I2C_ADDR (0x0) // generall call address
 #define I2C_FREQ 400000 // 400kHz fast mode
-
+#define STM 5
 // global flags
 bool stm_handshake = false;
 bool rtc_received = false;
@@ -45,6 +44,7 @@ void setup() {
 
   // init ESP_COMM
   pinMode(ESP_COMM, OUTPUT);
+  pinMode(STM, OUTPUT);
   digitalWrite(ESP_COMM, HIGH);
 
   // init I2C slave mode
@@ -72,6 +72,7 @@ void setup() {
   socketIO.begin(server, port, url);
   socketIO.onEvent(socketIOEvent);
 
+  
   disableCore0WDT();
 }
 
@@ -103,6 +104,8 @@ void loop() {
         buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]);
 
     socketIO.sendEVENT(log_payload, 51);
+    Serial.print("Payload: ");
+    Serial.println(log_payload);
   }
 }
 
@@ -112,13 +115,14 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t* payload, size_t length) 
       server_conn = true;
       // join default namespace (no auto join in Socket.IO V3)
       socketIO.send(sIOtype_CONNECT, "/");
+      Serial.println("Connected!");
       break;
 
     case sIOtype_EVENT: {
       // parse server RTC time fix data
       StaticJsonDocument<64> json;
       DeserializationError jsonError = deserializeJson(json, payload, length);
-
+      
       if (jsonError) {
         return;
       }
@@ -129,12 +133,15 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t* payload, size_t length) 
         strncpy(rtc, json[1]["datetime"], 19);
         Wire.slaveWrite((uint8_t *)rtc, 19);
         rtc_received = true;
+        Serial.println("EVENT!");
       }
+      Serial.println("EVENT!");
       break;
     }
 
     case sIOtype_DISCONNECT:
       server_conn = false;
+      Serial.println("Failed to Connect!");
       break;
 
     case sIOtype_ACK:
@@ -149,7 +156,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t* payload, size_t length) 
 void i2c_rcv_callback(int len) {
   int i = 0;
   char buffer[16];
-
+  Serial.println("START I2C");
   while (Wire.available()) {
     if (i < 16) {
       buffer[i++] = Wire.read();
@@ -162,7 +169,7 @@ void i2c_rcv_callback(int len) {
   if (!stm_handshake) {
     if (strncmp(buffer, "READY", 5) == 0) {
       stm_handshake = true;
-      digitalWrite(ESP_COMM, LOW);
+      digitalWrite(STM, HIGH);
     }
   }
 

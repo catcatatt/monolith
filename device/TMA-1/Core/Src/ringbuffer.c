@@ -13,6 +13,13 @@ void ring_buffer_init(ring_buffer_t *buffer, char *buf, size_t buf_size) {
   buffer->head_index = 0;
 }
 
+void ring_buffer_flush(ring_buffer_t *buffer) {
+  buffer->tail_index = 0;
+  buffer->head_index = 0;
+  // 필요에 따라, 버퍼 내용을 지우고 싶다면 다음 라인을 활성화하세요:
+  // memset(buffer->buffer, 0, buffer->buffer_mask + 1);
+}
+
 void ring_buffer_queue(ring_buffer_t *buffer, char data) {
   /* Is buffer full? */
   if(ring_buffer_is_full(buffer)) {
